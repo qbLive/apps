@@ -11,9 +11,15 @@ android {
         applicationId = "com.xdreemb52.azhalha"
         minSdk = 26
         targetSdk = 35
-        versionCode = 1
-        versionName = "1.0.0"
+        versionCode = 8
+        versionName = "1.0.7"
         buildConfigField("String", "SITE_URL", "\"https://xdreemb52.vercel.app/\"")
+    }
+
+    buildTypes {
+        getByName("release") {
+            isMinifyEnabled = false
+        }
     }
 
     buildFeatures { buildConfig = true }
@@ -28,4 +34,5 @@ android {
 dependencies {
     implementation("androidx.activity:activity-ktx:1.10.1")
     implementation("androidx.core:core-ktx:1.16.0")
+    implementation("androidx.webkit:webkit:1.13.0")
 }

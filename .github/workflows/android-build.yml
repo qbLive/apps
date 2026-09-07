@@ -1,10 +1,12 @@
-name: Android Build
+name: Android Release Build
 
 on:
+  workflow_dispatch:
   push:
     branches: [main]
-  pull_request:
-    branches: [main]
+
+permissions:
+  contents: read
 
 jobs:
   build:
@@ -30,12 +32,28 @@ jobs:
         with:
           gradle-version: '8.9'
 
-      - name: Build debug APK
-        run: gradle :app:assembleDebug --stacktrace
+      - name: Build release APK
+        run: gradle :app:assembleRelease --stacktrace
 
-      - name: Upload debug APK
+      - name: Verify APK metadata and alignment
+        shell: bash
+        run: |
+          APK="app/build/outputs/apk/release/app-release-unsigned.apk"
+          test -f "$APK"
+          "${ANDROID_HOME}/build-tools/35.0.0/aapt" dump badging "$APK" | tee /tmp/badging.txt
+          grep -F "package: name='com.xdreemb52.azhalha' versionCode='8' versionName='1.0.7'" /tmp/badging.txt
+          "${ANDROID_HOME}/build-tools/35.0.0/zipalign" -c -v 4 "$APK"
+          cp "$APK" "XDreemB52-Android-1.0.7-unsigned.apk"
+
+      - name: Package Android signing tools
+        shell: bash
+        run: tar -czf android-build-tools-35.0.0.tgz -C "${ANDROID_HOME}/build-tools" 35.0.0
+
+      - name: Upload release build
         uses: actions/upload-artifact@v4
         with:
-          name: azhalha-debug-apk
-          path: app/build/outputs/apk/debug/app-debug.apk
+          name: XDreemB52-Android-1.0.7-build
+          path: |
+            XDreemB52-Android-1.0.7-unsigned.apk
+            android-build-tools-35.0.0.tgz
           if-no-files-found: error
