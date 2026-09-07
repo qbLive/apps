@@ -1,0 +1,82 @@
+name: Device Control Windows Test
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - device-control-test
+    paths:
+      - 'device-control-test/**'
+      - '.github/workflows/device-control-test.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: device-control-test
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.23.x'
+
+      - name: Install chat reader dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Build TikTok chat reader
+        run: |
+          npx esbuild tiktok-reader.mjs --bundle --platform=node --format=cjs --outfile=tiktok-reader.cjs
+          npx pkg tiktok-reader.cjs --targets node22-win-x64 --output Dreem-TikTok-Reader.exe
+
+      - name: Build Windows agent
+        shell: pwsh
+        run: |
+          gofmt -w main.go tray_windows.go
+          go test ./...
+          go build -trimpath -ldflags '-s -w -H=windowsgui' -o device-control-test.exe .
+
+      - name: Prepare release files
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path release | Out-Null
+          Copy-Item device-control-test.exe release\device-control-test.exe
+          Copy-Item Dreem-TikTok-Reader.exe release\Dreem-TikTok-Reader.exe
+          @'
+          XDreemB52 Device Control - Windows test build
+
+          Run device-control-test.exe. It will open the control page and add a desktop shortcut.
+          Keep the app running while using the page.
+          '@ | Set-Content release\README.txt
+
+      - name: Upload workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: device-control-windows-test
+          path: device-control-test/release
+          if-no-files-found: error
+
+      - name: Publish prerelease
+        shell: pwsh
+        working-directory: device-control-test
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $tag = "device-control-test-v${{ github.run_number }}"
+          gh release create $tag release\device-control-test.exe release\Dreem-TikTok-Reader.exe `
+            --repo $env:GITHUB_REPOSITORY `
+            --title "Device Control Windows Test ${{ github.run_number }}" `
+            --notes "Test build for the Windows device-control companion app." `
+            --prerelease

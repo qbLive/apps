@@ -1,0 +1,12 @@
+{
+  "name": "dreem-control-tiktok-reader",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "tiktok-live-connector": "2.4.3"
+  },
+  "devDependencies": {
+    "esbuild": "0.25.9",
+    "@yao-pkg/pkg": "6.6.0"
+  }
+}
